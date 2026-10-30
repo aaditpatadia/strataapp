@@ -13,13 +13,17 @@ import {
   FolderPlus,
   HardDrive,
   Layers,
+  Link2,
   Plus,
+  RefreshCw,
   Search,
   Sliders,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import { fetchJson } from '../lib/apiClient';
 import { sanitizeOperationalError } from '../lib/coreLogic';
+import { deleteProjectFromFirestore } from '../lib/firebase';
 import { DiagnosticAlertCard } from './PersistentMediaInspector';
 import type {
   BrandProfile,
@@ -119,6 +123,55 @@ export const StudioDashboardView: React.FC<DashboardProps> = ({
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const [quickLinkUrl, setQuickLinkUrl] = useState('');
+  const [quickLinkBusy, setQuickLinkBusy] = useState(false);
+
+  const handleQuickLinkImportFromDashboard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const rawUrl = quickLinkUrl.trim();
+    if (!rawUrl) return;
+    setQuickLinkBusy(true);
+    setActionFeedback(null);
+    try {
+      let cleanTitle = rawUrl;
+      try {
+        const u = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`);
+        const slug = u.pathname.split('/').filter(Boolean).pop()?.replace(/[-_]+/g, ' ');
+        cleanTitle = slug ? `${slug} (${u.hostname.replace(/^www\./, '')})` : u.hostname;
+      } catch {
+        // fallback
+      }
+      const createdBundle = await fetchJson<{ project: Project }>('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `Link Import — ${cleanTitle.slice(0, 48)}`,
+          brandId: brands[0]?.id || 'brand-user-default',
+          sourceTitle: cleanTitle.slice(0, 80),
+          sourceType: 'Educational Video',
+          sourceLanguage: 'en',
+          targetAudience: brands[0]?.targetAudiences?.[0] || 'Practitioners & Decision Makers',
+          primaryObjective: 'Extract insights, written deliverables, and short-form video clips from link',
+        }),
+      });
+      const newProjId = createdBundle.project.id;
+      await fetchJson(`/api/projects/${newProjId}/source/url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: rawUrl }),
+      });
+      setQuickLinkUrl('');
+      await onRefreshStudio?.();
+      onSelectProject(newProjId, 'assets');
+    } catch (err: any) {
+      setActionFeedback({
+        type: 'error',
+        text: err.message || 'Could not import link.',
+      });
+    } finally {
+      setQuickLinkBusy(false);
+    }
+  };
 
   const activeProjectsCount = projects.filter((p) => !p.archived).length;
   const archivedProjectsCount = projects.filter((p) => Boolean(p.archived)).length;
@@ -226,17 +279,30 @@ export const StudioDashboardView: React.FC<DashboardProps> = ({
 
   const handleConfirmDeleteProject = async () => {
     if (!deleteModalData) return;
+    const targetProjectId =
+      deleteModalData.projectId || (deleteModalData as any).project?.id;
+    const deletedName =
+      deleteModalData.projectName ||
+      (deleteModalData as any).project?.name ||
+      'Project';
+    if (!targetProjectId) {
+      setDeleteModalData(null);
+      return;
+    }
     setActionBusy(true);
     try {
-      const res = await fetch(`/api/projects/${deleteModalData.projectId}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `/api/projects/${encodeURIComponent(targetProjectId)}?cancelActiveJobs=true`,
+        {
+          method: 'DELETE',
+        }
+      );
       const text = await res.text();
       const body = text ? JSON.parse(text) : {};
       if (!res.ok) {
         throw new Error(body.error || 'Failed to delete project.');
       }
-      const deletedName = deleteModalData.projectName;
+      void deleteProjectFromFirestore(targetProjectId);
       setDeleteModalData(null);
       await onRefreshStudio?.();
       setActionFeedback({
@@ -312,6 +378,52 @@ export const StudioDashboardView: React.FC<DashboardProps> = ({
           </button>
         </div>
       )}
+
+      {/* Paste Any Link & Instant Repurpose Bar */}
+      <form
+        onSubmit={handleQuickLinkImportFromDashboard}
+        className="p-4 sm:p-5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col md:flex-row items-stretch md:items-center gap-3"
+      >
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+            <Link2 className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-900">
+              Paste Any Link to Repurpose Instantly
+            </p>
+            <p className="text-[11px] text-slate-500">
+              YouTube, Loom, Podcast, Article/Blog, or direct MP4/MP3 URL
+            </p>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            value={quickLinkUrl}
+            onChange={(e) => setQuickLinkUrl(e.target.value)}
+            placeholder="Paste a YouTube, podcast, article, or media URL (e.g., https://youtube.com/watch?v=...)"
+            className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-blue-600 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={quickLinkBusy || !quickLinkUrl.trim()}
+            className="px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
+          >
+            {quickLinkBusy ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Extracting & Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                Import Link & Generate Assets
+              </>
+            )}
+          </button>
+        </div>
+      </form>
 
       {/* KPI Metric Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -844,7 +956,7 @@ export const StudioDashboardView: React.FC<DashboardProps> = ({
 
             {deleteModalData.activeRenderJobsCount > 0 && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900 font-medium">
-                Warning: {deleteModalData.activeRenderJobsCount} render job(s) are currently active for this project. Cancel or wait for active renders to finish before deleting.
+                Note: {deleteModalData.activeRenderJobsCount} active/queued render job(s) will be automatically cancelled when deleting this project.
               </div>
             )}
 
@@ -858,9 +970,7 @@ export const StudioDashboardView: React.FC<DashboardProps> = ({
               </button>
               <button
                 type="button"
-                disabled={
-                  actionBusy || deleteModalData.activeRenderJobsCount > 0
-                }
+                disabled={actionBusy}
                 onClick={handleConfirmDeleteProject}
                 className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 rounded-md hover:bg-rose-700 disabled:opacity-50"
               >

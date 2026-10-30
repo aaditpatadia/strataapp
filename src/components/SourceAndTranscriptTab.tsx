@@ -766,21 +766,22 @@ export const SourceMaterialSection: React.FC<SourceImportProps> = ({
     e.preventDefault();
     if (!urlInput.trim()) return;
     setBusy(true);
-    setBusyStepText('Validating URL permissions, downloading media stream, and indexing...');
+    setBusyStepText('Connecting link, extracting transcript & content intelligence, and generating assets...');
     setFeedback(null);
     try {
       const res = await onValidateUrl(urlInput.trim());
       if (!res.allowed) {
         setFeedback({
           type: 'warning',
-          message: res.error || 'URL cannot be downloaded directly.',
+          message: res.error || 'Could not import link.',
           detail: res.alternativeAction,
         });
       } else {
         setFeedback({
           type: 'success',
-          message: res.message || 'Direct media URL downloaded, verified, and attached to project.',
+          message: res.message || 'Link imported, indexed, and repurposed into written assets and clips.',
         });
+        setUrlInput('');
       }
     } catch (err: any) {
       setFeedback({ type: 'error', message: err.message });
@@ -851,6 +852,27 @@ export const SourceMaterialSection: React.FC<SourceImportProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Prominent Paste Any Link Bar inside Source Material */}
+      <form
+        onSubmit={handleUrlCheck}
+        className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5"
+      >
+        <input
+          type="text"
+          value={urlInput}
+          onChange={(e) => setUrlInput(e.target.value)}
+          placeholder="Paste any YouTube, Loom, Podcast, Article/Blog, or direct MP4/MP3 link here..."
+          className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:border-blue-600 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={busy || !urlInput.trim()}
+          className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50 shrink-0"
+        >
+          {busy ? 'Importing Link...' : 'Import Link & Generate All Assets'}
+        </button>
+      </form>
 
       {uploadState && (
         <div
@@ -957,7 +979,7 @@ export const SourceMaterialSection: React.FC<SourceImportProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              E. Public Video URL
+              E. Paste Any Link / URL
             </button>
           </div>
 
@@ -1112,15 +1134,15 @@ export const SourceMaterialSection: React.FC<SourceImportProps> = ({
                   htmlFor="source-url-input"
                   className="block text-xs font-semibold text-slate-700 mb-1"
                 >
-                  Enter Authorised Public Media or Transcript URL
+                  Paste Any Link (YouTube, Loom, Podcast, Article/Blog, or Direct Media URL)
                 </label>
                 <p className="text-xs text-slate-500 mb-2">
-                  Downloads direct public media files (.mp4, .webm, .mov, .mp3, .wav, .srt, .vtt) into the workspace, probes via FFprobe, and indexes segments. Respects platform copyright and access controls on closed platforms (e.g., YouTube/TikTok).
+                  Extracts title, transcript segments, content intelligence, 8 written deliverables, and short-form video clips directly from any web link or media stream.
                 </p>
                 <input
                   id="source-url-input"
-                  type="url"
-                  placeholder="https://cdn.example.com/keynote.mp4 or https://youtube.com/watch?v=..."
+                  type="text"
+                  placeholder="https://youtube.com/watch?v=... or https://yourblog.com/post or https://cdn.example.com/keynote.mp4"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-blue-600"
@@ -1132,7 +1154,7 @@ export const SourceMaterialSection: React.FC<SourceImportProps> = ({
                   disabled={busy || !urlInput.trim()}
                   className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50"
                 >
-                  Validate & Import URL Media
+                  Import Link & Repurpose Now
                 </button>
                 <button
                   type="button"

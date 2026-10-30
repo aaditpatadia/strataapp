@@ -84,6 +84,8 @@ export interface DatabaseSchema {
   exports: Record<string, ExportPackageRecord[]>;   // keyed by projectId
   integrations?: IntegrationConnection[];
   integrationLogs?: IntegrationAuditLog[];
+  creditWallet?: UserCreditWallet;
+  deletedProjectIds?: string[];
 }
 
 let memoryDb: DatabaseSchema | null = null;
@@ -1480,35 +1482,20 @@ Dr. Elena Vance breaks down telemetry from 42 production Kubernetes clusters, re
   });
 
   memoryDb = {
-    brands: [vanguardBrand, apexBrand],
-    projects: [mainProject],
-    sources: [sourceMaterial],
-    transcripts: {
-      [mainProject.id]: SAMPLE_KEYNOTE_TRANSCRIPT,
-    },
-    analyses: {
-      [mainProject.id]: analysis,
-    },
-    strategies: {
-      [mainProject.id]: strategy,
-    },
-    assets: {
-      [mainProject.id]: initialAssets,
-    },
-    clips: {
-      [mainProject.id]: initialClips,
-    },
-    renderJobs: {
-      [mainProject.id]: initialRenderJobs,
-    },
-    calendars: {
-      [mainProject.id]: initialCalendar,
-    },
-    exports: {
-      [mainProject.id]: [],
-    },
+    brands: [],
+    projects: [],
+    sources: [],
+    transcripts: {},
+    analyses: {},
+    strategies: {},
+    assets: {},
+    clips: {},
+    renderJobs: {},
+    calendars: {},
+    exports: {},
     integrations: DEFAULT_INTEGRATIONS,
     integrationLogs: [],
+    deletedProjectIds: [],
   };
 
   await repairAndMigrateDatabase(memoryDb);
@@ -1527,6 +1514,48 @@ async function repairAndMigrateDatabase(db: DatabaseSchema): Promise<void> {
   }
   if (!Array.isArray(db.integrationLogs)) {
     db.integrationLogs = [];
+  }
+  if (!Array.isArray(db.deletedProjectIds)) {
+    db.deletedProjectIds = [];
+  }
+
+  // Remove hardcoded sample companies (Vanguard & Apex) and sample keynote project so user builds their own personalized Brand Profile
+  if (Array.isArray(db.brands)) {
+    db.brands = db.brands.filter(
+      (b) => b.id !== 'brand-vanguard' && b.id !== 'brand-apex'
+    );
+  } else {
+    db.brands = [];
+  }
+
+  if (Array.isArray(db.projects)) {
+    const sampleProjectIds = new Set(['proj-keynote-q4', ...(db.deletedProjectIds || [])]);
+    const removedIds = db.projects
+      .filter((p) => sampleProjectIds.has(p.id))
+      .map((p) => p.id);
+    if (removedIds.length > 0) {
+      db.projects = db.projects.filter((p) => !sampleProjectIds.has(p.id));
+      db.sources = (db.sources || []).filter((s) => !sampleProjectIds.has(s.projectId));
+      for (const pid of removedIds) {
+        delete db.transcripts[pid];
+        delete db.analyses[pid];
+        delete db.strategies[pid];
+        delete db.assets[pid];
+        delete db.clips[pid];
+        delete db.renderJobs[pid];
+        delete db.calendars[pid];
+        delete db.exports[pid];
+      }
+    }
+    // Rebind any projects referencing removed sample brands to the user's primary brand if available
+    if (db.brands.length > 0) {
+      const primaryBrandId = db.brands[0].id;
+      for (const p of db.projects) {
+        if (!db.brands.some((b) => b.id === p.brandId)) {
+          p.brandId = primaryBrandId;
+        }
+      }
+    }
   }
 
   // 1. Normalize source paths & probe frameRate / storageBackend
@@ -1558,9 +1587,13 @@ async function repairAndMigrateDatabase(db: DatabaseSchema): Promise<void> {
     }
 
     if (Array.isArray(proj.failedTasks)) {
-      // Remove or sanitize any raw FFmpeg command dumps from previous crashes
+      // Remove or sanitize any raw FFmpeg command dumps or legacy URL restriction alerts from previous sessions
       proj.failedTasks = proj.failedTasks
-        .filter((f) => !String(f.message || '').includes('Command failed: ffmpeg'))
+        .filter(
+          (f) =>
+            !String(f.message || '').includes('Command failed: ffmpeg') &&
+            !String(f.message || '').includes('Direct scraping or bypassing platform download controls')
+        )
         .map((f) => {
           if (!f.diagnostic) {
             const diag = sanitizeOperationalError({
@@ -1727,11 +1760,58 @@ async function repairAndMigrateDatabase(db: DatabaseSchema): Promise<void> {
         (s) => s.filePath === fullVikasPath || s.fileName.toLowerCase().includes('vikas-divyakirti')
       );
 
-      if (!alreadyBound && fs.existsSync(fullVikasPath)) {
+      if (
+        !alreadyBound &&
+        !db.deletedProjectIds.includes('aifbgvaer') &&
+        fs.existsSync(fullVikasPath)
+      ) {
         try {
           const probe = await probeMediaFile(fullVikasPath);
           const now = new Date().toISOString();
-          const brand = db.brands[0];
+          const fallbackBrand: BrandProfile = db.brands[0] || {
+            id: 'brand-user-default',
+            name: 'Your Brand Workspace',
+            companyDescription: 'Personalized content operations and short-form video studio.',
+            industry: 'Media & Technology',
+            businessModel: 'Digital Content & Operations',
+            productsAndServices: ['Video & Written Content Repurposing'],
+            targetAudiences: ['Practitioners, Creators & Decision Makers'],
+            primaryCustomerProblems: ['Turning long-form recordings into high-signal multi-platform assets'],
+            brandPositioning: 'Clear, insight-driven, audience-first storytelling.',
+            uniqueDifferentiators: ['Source-grounded editorial precision'],
+            brandVoice: 'Clear, authoritative, and engaging',
+            writingStyle: 'Direct, actionable prose with concrete takeaways.',
+            preferredVocabulary: ['actionable', 'architecture', 'framework', 'clarity'],
+            wordsToAvoid: ['fluff', 'clickbait'],
+            approvedCallsToAction: ['Subscribe for the full breakdown and resources.'],
+            website: '',
+            brandReferences: [],
+            existingContentExamples: [],
+            preferredPlatforms: ['YouTube Shorts', 'Instagram Reels', 'LinkedIn', 'Blog / Organic Search', 'Email Newsletter'],
+            visualIdentity: {
+              logoText: 'STUDIO',
+              primaryColor: '#0F172A',
+              accentColor: '#2563EB',
+              backgroundColor: '#F8FAFC',
+              fontPreference: 'Plus Jakarta Sans',
+              videoLayoutPreference: 'blurred-background',
+              captionStyle: {
+                fontFamily: 'NotoSans-Bold',
+                fontSize: 38,
+                textColor: '#FFFFFF',
+                backgroundColor: '#0F172ACC',
+                outlineColor: '#000000',
+                position: 'bottom',
+                maxLineLengthChars: 30,
+                maxWordsPerSegment: 7,
+                highlightKeywords: ['framework', 'strategy', 'clarity'],
+                safeMarginPx: 120,
+              },
+            },
+            createdAt: now,
+            updatedAt: now,
+          };
+          const brand = fallbackBrand;
           const projId = 'aifbgvaer';
           const sourceId = 'src-vikas-01';
           const durationSec = probe.durationSeconds || 3952.2;
@@ -2006,8 +2086,53 @@ export function getFullProjectBundle(projectId: string): FullProjectBundle | nul
   const project = db.projects.find((p) => p.id === projectId);
   if (!project) return null;
 
+  const now = new Date().toISOString();
+  const fallbackBrand: BrandProfile = {
+    id: project.brandId || 'brand-user-default',
+    name: 'Personal Brand Workspace',
+    companyDescription: 'Custom brand profile for multi-platform content repurposing.',
+    industry: 'Technology & Media',
+    businessModel: 'Creator & Enterprise Content Operations',
+    productsAndServices: ['Core Platform & Services'],
+    targetAudiences: [project.targetAudience || 'Decision Makers & Practitioners'],
+    primaryCustomerProblems: ['Scaling high-signal written and short-form video assets'],
+    brandPositioning: 'Clear, authoritative, source-grounded insights.',
+    uniqueDifferentiators: ['Empirical, audience-tailored execution'],
+    brandVoice: 'Authoritative, pragmatic, and clear',
+    writingStyle: 'Direct, scannable prose backed by real examples from the source.',
+    preferredVocabulary: ['strategy', 'execution', 'framework', 'impact'],
+    wordsToAvoid: ['synergy', 'guaranteed viral'],
+    approvedCallsToAction: ['Explore the full episode and implementation guide.'],
+    website: '',
+    brandReferences: [],
+    existingContentExamples: [],
+    preferredPlatforms: project.desiredPlatforms || ['LinkedIn', 'Blog / Organic Search', 'Email Newsletter', 'YouTube Shorts'],
+    visualIdentity: {
+      logoText: 'BRAND STUDIO',
+      primaryColor: '#0F172A',
+      accentColor: '#2563EB',
+      backgroundColor: '#F8FAFC',
+      fontPreference: 'Plus Jakarta Sans',
+      videoLayoutPreference: 'blurred-background',
+      captionStyle: {
+        fontFamily: 'NotoSans-Bold',
+        fontSize: 38,
+        textColor: '#FFFFFF',
+        backgroundColor: '#0F172ACC',
+        outlineColor: '#000000',
+        position: 'bottom',
+        maxLineLengthChars: 30,
+        maxWordsPerSegment: 7,
+        highlightKeywords: [],
+        safeMarginPx: 120,
+      },
+    },
+    createdAt: now,
+    updatedAt: now,
+  };
+
   const brand =
-    db.brands.find((b) => b.id === project.brandId) || db.brands[0];
+    db.brands.find((b) => b.id === project.brandId) || db.brands[0] || fallbackBrand;
   const source =
     db.sources.find((s) => s.projectId === projectId) || null;
   const rawTranscript = db.transcripts[projectId] || [];
@@ -2140,11 +2265,18 @@ export function duplicateProjectData(projectId: string): Project | null {
 
 export function getProjectDeletionPreview(projectId: string): {
   project: Project | null;
+  projectId: string;
+  projectName: string;
   sourceFileName: string | null;
+  sourceFileShared: boolean;
   sourceFileSharedWithOtherProjects: boolean;
+  transcriptSegmentsCount: number;
   renderedClipsCount: number;
+  renderedClipFilesCount: number;
+  videoClipsCount: number;
   writtenAssetsCount: number;
   exportsCount: number;
+  exportArchivesCount: number;
 } {
   const db = getStorage();
   const project = db.projects.find((p) => p.id === projectId) || null;
@@ -2156,24 +2288,43 @@ export function getProjectDeletionPreview(projectId: string): {
           other.projectId !== projectId && other.filePath === source.filePath
       )
   );
+  const transcript = db.transcripts[projectId] || [];
   const clips = db.clips[projectId] || [];
   const assets = db.assets[projectId] || [];
   const exportsList = db.exports[projectId] || [];
+  const renderedClipsCount = clips.filter((c) => Boolean(c.outputVideoUrl)).length;
 
   return {
     project,
+    projectId: project?.id || projectId,
+    projectName: project?.name || 'Project',
     sourceFileName: source?.fileName || null,
+    sourceFileShared: sourceFileSharedWithOtherProjects,
     sourceFileSharedWithOtherProjects,
-    renderedClipsCount: clips.filter((c) => Boolean(c.outputVideoUrl)).length,
+    transcriptSegmentsCount: transcript.length,
+    renderedClipsCount,
+    renderedClipFilesCount: renderedClipsCount,
+    videoClipsCount: clips.length,
     writtenAssetsCount: assets.length,
     exportsCount: exportsList.length,
+    exportArchivesCount: exportsList.length,
   };
 }
 
 export function deleteProjectData(projectId: string): boolean {
   const db = getStorage();
+  if (!Array.isArray(db.deletedProjectIds)) {
+    db.deletedProjectIds = [];
+  }
+  if (!db.deletedProjectIds.includes(projectId)) {
+    db.deletedProjectIds.push(projectId);
+  }
+
   const idx = db.projects.findIndex((p) => p.id === projectId);
-  if (idx === -1) return false;
+  if (idx === -1) {
+    saveStorage();
+    return false;
+  }
 
   const source = db.sources.find((s) => s.projectId === projectId);
   // Protect shared media files: only unlink source file if NO OTHER project references it!

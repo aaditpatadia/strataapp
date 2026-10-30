@@ -133,45 +133,31 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUserAccount(incoming());
       allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
         isValidUserAccount(incoming()) &&
-        incoming().uid == existing().uid &&
-        incoming().diff(existing()).affectedKeys().hasOnly([
-          'displayName',
-          'email',
-          'photoURL',
-          'creditBalance',
-          'lifetimeCreditsAdded',
-          'lifetimeCreditsUsed',
-          'autoRechargeEnabled',
-          'updatedAt'
-        ]);
+        incoming().uid == existing().uid;
       allow delete: if false;
     }
 
     match /projects/{projectId} {
-      allow get: if isSignedIn() && isValidId(projectId) && existing().ownerId == request.auth.uid;
+      allow get: if isSignedIn() && isValidId(projectId) && (resource == null || existing().ownerId == request.auth.uid);
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       allow create: if isSignedIn() && isValidId(projectId) && isValidProjectSummary(incoming()) && incoming().projectId == projectId;
       allow update: if isSignedIn() && isValidId(projectId) &&
         isValidProjectSummary(incoming()) &&
         existing().ownerId == request.auth.uid &&
         incoming().ownerId == existing().ownerId &&
-        incoming().projectId == existing().projectId &&
-        incoming().diff(existing()).affectedKeys().hasOnly([
-          'name',
-          'brandProfileId',
-          'primaryObjective',
-          'transcriptCount',
-          'clipCount',
-          'updatedAt'
-        ]);
+        incoming().projectId == existing().projectId;
       allow delete: if isSignedIn() && isValidId(projectId) && existing().ownerId == request.auth.uid;
     }
 
     match /creditTransactions/{txId} {
-      allow get: if isSignedIn() && isValidId(txId) && existing().ownerId == request.auth.uid;
+      allow get: if isSignedIn() && isValidId(txId) && (resource == null || existing().ownerId == request.auth.uid);
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       allow create: if isSignedIn() && isValidId(txId) && isValidCreditTransaction(incoming()) && incoming().txId == txId;
-      allow update: if false;
+      allow update: if isSignedIn() && isValidId(txId) &&
+        isValidCreditTransaction(incoming()) &&
+        existing().ownerId == request.auth.uid &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().txId == existing().txId;
       allow delete: if false;
     }
   }

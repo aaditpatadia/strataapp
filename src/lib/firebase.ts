@@ -8,6 +8,7 @@ import {
   type User,
 } from 'firebase/auth';
 import {
+  deleteDoc,
   doc,
   getDoc,
   getDocFromServer,
@@ -130,39 +131,25 @@ export async function syncUserWalletToFirestore(
   user: StudioUserAccount,
   wallet: UserCreditWallet
 ): Promise<void> {
-  if (!auth.currentUser || !auth.currentUser.emailVerified) return;
+  if (!auth.currentUser || !auth.currentUser.emailVerified || !wallet) return;
   const uid = sanitizeId(auth.currentUser.uid);
   const path = `users/${uid}`;
   const docRef = doc(db, 'users', uid);
 
   const payload = {
     uid,
-    displayName: (user.displayName || 'Studio Operator').slice(0, 120),
-    email: (user.email || 'operator@stratastudio.app').slice(0, 254),
-    photoURL: (user.photoURL || '').slice(0, 1024),
-    creditBalance: Math.max(0, Math.min(10000000, Math.round(wallet.balance))),
-    lifetimeCreditsAdded: Math.max(0, Math.min(10000000, Math.round(wallet.lifetimeCreditsAdded))),
-    lifetimeCreditsUsed: Math.max(0, Math.min(10000000, Math.round(wallet.lifetimeCreditsUsed))),
+    displayName: (user?.displayName || auth.currentUser.displayName || 'Studio Operator').slice(0, 120),
+    email: (user?.email || auth.currentUser.email || 'operator@stratastudio.app').slice(0, 254),
+    photoURL: (user?.photoURL || auth.currentUser.photoURL || '').slice(0, 1024),
+    creditBalance: Math.max(0, Math.min(10000000, Math.round(Number(wallet.balance) || 0))),
+    lifetimeCreditsAdded: Math.max(0, Math.min(10000000, Math.round(Number(wallet.lifetimeCreditsAdded) || 0))),
+    lifetimeCreditsUsed: Math.max(0, Math.min(10000000, Math.round(Number(wallet.lifetimeCreditsUsed) || 0))),
     autoRechargeEnabled: Boolean(wallet.autoRechargeEnabled),
     updatedAt: new Date().toISOString().slice(0, 64),
   };
 
   try {
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) {
-      await setDoc(docRef, payload);
-    } else {
-      await updateDoc(docRef, {
-        displayName: payload.displayName,
-        email: payload.email,
-        photoURL: payload.photoURL,
-        creditBalance: payload.creditBalance,
-        lifetimeCreditsAdded: payload.lifetimeCreditsAdded,
-        lifetimeCreditsUsed: payload.lifetimeCreditsUsed,
-        autoRechargeEnabled: payload.autoRechargeEnabled,
-        updatedAt: payload.updatedAt,
-      });
-    }
+    await setDoc(docRef, payload);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
       handleFirestoreError(error, OperationType.WRITE, path);
@@ -172,14 +159,23 @@ export async function syncUserWalletToFirestore(
 
 export async function syncProjectSummaryToFirestore(
   project: Project,
-  transcriptCount: number,
-  clipCount: number
+  transcriptCount = 0,
+  clipCount = 0
 ): Promise<void> {
   if (!auth.currentUser || !auth.currentUser.emailVerified) return;
+  if (!project || typeof project !== 'object' || !project.id || project.id === 'undefined') {
+    return;
+  }
   const uid = sanitizeId(auth.currentUser.uid);
   const cleanProjectId = sanitizeId(`${uid}_${project.id}`);
   const path = `projects/${cleanProjectId}`;
   const docRef = doc(db, 'projects', cleanProjectId);
+
+  const safeTranscriptCount = Number.isFinite(transcriptCount) ? Math.round(transcriptCount) : 0;
+  const fallbackClipCount = Number.isFinite((project as any).renderedClipsCount)
+    ? Math.round((project as any).renderedClipsCount)
+    : 0;
+  const safeClipCount = Number.isFinite(clipCount) ? Math.round(clipCount) : fallbackClipCount;
 
   const payload = {
     projectId: cleanProjectId,
@@ -187,25 +183,13 @@ export async function syncProjectSummaryToFirestore(
     name: (project.name || 'Untitled Project').slice(0, 200),
     brandProfileId: sanitizeId(project.brandId || 'brand-default'),
     primaryObjective: (project.primaryObjective || '').slice(0, 1000),
-    transcriptCount: Math.max(0, Math.min(100000, transcriptCount)),
-    clipCount: Math.max(0, Math.min(10000, clipCount)),
+    transcriptCount: Math.max(0, Math.min(100000, safeTranscriptCount)),
+    clipCount: Math.max(0, Math.min(10000, safeClipCount)),
     updatedAt: new Date().toISOString().slice(0, 64),
   };
 
   try {
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) {
-      await setDoc(docRef, payload);
-    } else {
-      await updateDoc(docRef, {
-        name: payload.name,
-        brandProfileId: payload.brandProfileId,
-        primaryObjective: payload.primaryObjective,
-        transcriptCount: payload.transcriptCount,
-        clipCount: payload.clipCount,
-        updatedAt: payload.updatedAt,
-      });
-    }
+    await setDoc(docRef, payload);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
       handleFirestoreError(error, OperationType.WRITE, path);
@@ -217,19 +201,25 @@ export async function syncCreditTransactionToFirestore(
   tx: CreditTransaction
 ): Promise<void> {
   if (!auth.currentUser || !auth.currentUser.emailVerified) return;
+  if (!tx || typeof tx !== 'object' || !tx.id) return;
   const uid = sanitizeId(auth.currentUser.uid);
-  const txId = sanitizeId(tx.id);
+  const txId = sanitizeId(`${uid}_${tx.id}`);
   const path = `creditTransactions/${txId}`;
   const docRef = doc(db, 'creditTransactions', txId);
+
+  const validType =
+    tx.type === 'credit_topup' || tx.type === 'usage_deduction' || tx.type === 'starter_grant'
+      ? tx.type
+      : 'usage_deduction';
 
   const payload = {
     txId,
     ownerId: uid,
-    type: tx.type,
+    type: validType,
     operation: (tx.operation || 'studio_op').slice(0, 64),
     description: (tx.description || 'Credit operation').slice(0, 300),
-    amount: Math.max(-100000, Math.min(1000000, Math.round(tx.amount))),
-    balanceAfter: Math.max(0, Math.min(10000000, Math.round(tx.balanceAfter))),
+    amount: Math.max(-100000, Math.min(1000000, Math.round(Number(tx.amount) || 0))),
+    balanceAfter: Math.max(0, Math.min(10000000, Math.round(Number(tx.balanceAfter) || 0))),
     createdAt: (tx.createdAt || new Date().toISOString()).slice(0, 64),
   };
 
@@ -241,3 +231,20 @@ export async function syncCreditTransactionToFirestore(
     }
   }
 }
+
+export async function deleteProjectFromFirestore(projectId: string): Promise<void> {
+  if (!auth.currentUser || !auth.currentUser.emailVerified) return;
+  if (!projectId || projectId === 'undefined') return;
+  const uid = sanitizeId(auth.currentUser.uid);
+  const cleanProjectId = sanitizeId(`${uid}_${projectId}`);
+  const path = `projects/${cleanProjectId}`;
+  const docRef = doc(db, 'projects', cleanProjectId);
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  }
+}
+

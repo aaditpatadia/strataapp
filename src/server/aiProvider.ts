@@ -62,16 +62,26 @@ export function isGeminiConfigured(): boolean {
 async function withRetry<T>(
   operationName: string,
   fn: () => Promise<T>,
-  maxRetries = 1
+  maxRetries = 0,
+  timeoutMs = 4500
 ): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fn();
+      return await Promise.race([
+        fn(),
+        new Promise<T>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)),
+            timeoutMs
+          )
+        ),
+      ]);
     } catch (err: any) {
       lastError = err;
       const msg = String(err?.message || err);
       if (
+        msg.includes('timed out') ||
         msg.includes('not configured') ||
         msg.includes('API_KEY_INVALID') ||
         msg.includes('400') ||
@@ -85,7 +95,7 @@ async function withRetry<T>(
         throw err;
       }
       if (attempt < maxRetries) {
-        const delayMs = 400 * Math.pow(2, attempt);
+        const delayMs = 300 * Math.pow(2, attempt);
         await new Promise((r) => setTimeout(r, delayMs));
       }
     }

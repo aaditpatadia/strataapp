@@ -124,43 +124,69 @@ export const ContentIntelligenceSection: React.FC<IntelligenceProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            disabled={busy || transcript.length === 0}
-            onClick={() => handleRunAnalysis(!geminiConfigured)}
+            disabled={busy}
+            onClick={() => handleRunAnalysis(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
-            {geminiConfigured
-              ? 'Run Gemini Content Analysis'
-              : 'Run Deterministic Transcript Analysis'}
+            {busy
+              ? 'Analyzing & Building Strategy...'
+              : analysis
+                ? 'Refresh Content Intelligence'
+                : 'Generate Content Intelligence & Strategy'}
           </button>
 
-          {analysis && strategy && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => handleRunGenerateAssets(!geminiConfigured)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              Generate Deliverables Package
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => handleRunGenerateAssets(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {busy ? 'Generating Written Assets...' : 'Generate Written Assets Now'}
+          </button>
         </div>
       </div>
 
       {statusMsg && (
-        <div className="p-3 bg-slate-100 border border-slate-300 rounded text-xs font-medium text-slate-800">
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-medium text-emerald-900">
           {statusMsg}
         </div>
       )}
 
       {!analysis ? (
-        <div className="bg-white border border-slate-200 rounded-lg p-12 text-center space-y-3">
-          <p className="text-sm font-semibold text-slate-800">
-            No Content Intelligence Report generated for this project yet.
-          </p>
-          <p className="text-xs text-slate-500 max-w-lg mx-auto">
-            Ensure your project has normalized transcript segments ({transcript.length} currently loaded), then click the analysis button above to extract source-linked thesis statements, verbatim quotations, explicit statistics, and content angles.
-          </p>
+        <div className="bg-white border border-slate-200 rounded-xl p-8 sm:p-12 text-center space-y-4">
+          <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-base font-bold text-slate-900">
+              Ready to Generate Content Intelligence & Written Assets
+            </p>
+            <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
+              Extract source-linked thesis statements, verbatim quotations, explicit statistics, and 5 strategic content angles tailored to your Brand Profile in one click.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => handleRunAnalysis(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
+              {busy ? 'Generating Intelligence...' : '1-Click Generate Content Intelligence'}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => handleRunGenerateAssets(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {busy ? 'Generating...' : 'Generate Intelligence + All 8 Written Assets'}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-8">
@@ -552,6 +578,21 @@ export const WrittenAssetsSection: React.FC<WrittenAssetsProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleGenerateAllAssets = async () => {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await onGenerateAssets(true);
+      setFeedback(
+        'Generated complete written deliverables suite (SEO Blog, Newsletter, 3 LinkedIn Posts, Show Notes, Titles & FAQ) tailored to your brand!'
+      );
+    } catch (err: any) {
+      setFeedback(`Generation error: ${err.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
@@ -568,16 +609,20 @@ export const WrittenAssetsSection: React.FC<WrittenAssetsProps> = ({
           <button
             type="button"
             disabled={busy}
-            onClick={() => onGenerateAssets(!geminiConfigured)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+            onClick={handleGenerateAllAssets}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
-            Regenerate Unapproved Drafts
+            {busy
+              ? 'Generating Written Assets...'
+              : assets.length === 0
+                ? 'Generate All 8 Written Assets Now'
+                : 'Regenerate Unapproved Drafts'}
           </button>
           <button
             type="button"
             onClick={() => onNavigateSection('clips')}
-            className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            className="px-3.5 py-2 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
           >
             Proceed to Video Clips Studio
           </button>
@@ -585,7 +630,7 @@ export const WrittenAssetsSection: React.FC<WrittenAssetsProps> = ({
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-md w-fit">
+      <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-md w-full overflow-x-auto">
         {(
           [
             { id: 'all', label: `All Deliverables (${assets.length})` },
@@ -615,23 +660,32 @@ export const WrittenAssetsSection: React.FC<WrittenAssetsProps> = ({
       </div>
 
       {feedback && (
-        <div className="p-3 bg-slate-100 border border-slate-300 rounded text-xs font-medium text-slate-800">
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-medium text-emerald-900">
           {feedback}
         </div>
       )}
 
       {filteredAssets.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-lg p-12 text-center space-y-3">
-          <p className="text-sm font-semibold text-slate-800">
-            No written deliverables in this category yet.
-          </p>
+        <div className="bg-white border border-slate-200 rounded-xl p-8 sm:p-12 text-center space-y-4">
+          <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-base font-bold text-slate-900">
+              Generate Time-Saving Written Deliverables in One Click
+            </p>
+            <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
+              Automatically builds your SEO Blog Article, Executive Email Newsletter, 3 Distinct LinkedIn Posts, Podcast Show Notes, Video Title Pack, YouTube Description, and FAQ Guide—grounded in your source and Brand Profile.
+            </p>
+          </div>
           <button
             type="button"
             disabled={busy}
-            onClick={() => onGenerateAssets(!geminiConfigured)}
-            className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            onClick={handleGenerateAllAssets}
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-xs"
           >
-            Generate Written Deliverables Now
+            <Sparkles className="w-4 h-4" />
+            {busy ? 'Generating All Written Assets...' : 'Generate All 8 Written Assets Now'}
           </button>
         </div>
       ) : (

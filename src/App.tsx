@@ -40,9 +40,11 @@ import { VideoClipsAndRenderSection } from './components/VideoClipsAndRenderTab'
 import { IntegrationsTab } from './components/IntegrationsTab';
 import {
   CreditsAndBillingModal,
+  FirstRunBrandOnboardingModal,
   GoogleSignInGate,
 } from './components/AuthAndCreditsModals';
 import {
+  deleteProjectFromFirestore,
   signOutStudioUser,
   subscribeToStudioAuth,
   syncCreditTransactionToFirestore,
@@ -165,8 +167,8 @@ export default function App() {
           uid: 'usr-strata-operator-01',
           email: 'aadit.operator@stratastudio.ai',
           displayName: 'Studio Principal Operator',
-          role: 'owner',
-          lastLoginAt: new Date().toISOString(),
+          emailVerified: true,
+          provider: 'studio_session',
         };
       }
       const saved = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -197,6 +199,18 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] =
     useState<boolean>(false);
+  const [pendingBrandName, setPendingBrandName] = useState<string>('');
+  const [brandOnboardingDismissed, setBrandOnboardingDismissed] =
+    useState<boolean>(() => {
+      try {
+        return (
+          typeof window !== 'undefined' &&
+          new URLSearchParams(window.location.search).get('autostart') === '1'
+        );
+      } catch {
+        return false;
+      }
+    });
 
   // Global non-blocking background upload manager (persists while exploring any tab)
   const [activeUploads, setActiveUploads] = useState<
@@ -208,17 +222,9 @@ export default function App() {
   useEffect(() => {
     const unsub = subscribeToStudioAuth((fbUser) => {
       if (fbUser) {
-        const account: StudioUserAccount = {
-          uid: fbUser.uid,
-          email: fbUser.email || 'operator@stratastudio.ai',
-          displayName: fbUser.displayName || 'Studio Operator',
-          photoURL: fbUser.photoURL || undefined,
-          role: 'owner',
-          lastLoginAt: new Date().toISOString(),
-        };
-        setStudioUser(account);
+        setStudioUser(fbUser);
         try {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(account));
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(fbUser));
         } catch {
           // ignore storage errors
         }
@@ -227,8 +233,15 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  const handleAuthenticatedUser = (account: StudioUserAccount) => {
+  const handleAuthenticatedUser = (
+    account: StudioUserAccount,
+    initialBrandName?: string
+  ) => {
     setStudioUser(account);
+    if (initialBrandName) {
+      setPendingBrandName(initialBrandName);
+      setBrandOnboardingDismissed(false);
+    }
     try {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(account));
     } catch {
@@ -238,7 +251,9 @@ export default function App() {
       syncUserWalletToFirestore(account, creditWallet).catch(() => {});
     }
     for (const p of projects) {
-      syncProjectSummaryToFirestore(account.uid, p).catch(() => {});
+      if (p && p.id) {
+        syncProjectSummaryToFirestore(p, 0, p.renderedClipsCount || 0).catch(() => {});
+      }
     }
   };
 
@@ -269,6 +284,13 @@ export default function App() {
         `/api/projects/${projectId}`
       );
       setActiveBundle(bundle);
+      if (bundle?.project?.id) {
+        syncProjectSummaryToFirestore(
+          bundle.project,
+          bundle.transcript?.length || 0,
+          bundle.clips?.length || 0
+        ).catch(() => {});
+      }
       return bundle;
     } catch {
       return null;
@@ -523,9 +545,7 @@ export default function App() {
         syncUserWalletToFirestore(studioUser, data.wallet).catch(() => {});
         const latestTx = data.wallet.transactions?.[0];
         if (latestTx) {
-          syncCreditTransactionToFirestore(studioUser.uid, latestTx).catch(
-            () => {}
-          );
+          syncCreditTransactionToFirestore(latestTx).catch(() => {});
         }
       }
     }
@@ -563,8 +583,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Strict 3-Zone Top Bar Contract */}
-      <header className="flex items-center justify-between gap-6 px-6 py-3.5 bg-white border-b border-slate-200 sticky top-0 z-30">
+      {/* Responsive, Minimal 3-Zone Top Bar */}
+      <header className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 sm:gap-6 px-4 sm:px-6 py-3 bg-white border-b border-slate-200 sticky top-0 z-30">
         {/* Zone 1: Single text element wordmark */}
         <a
           href="#dashboard"
@@ -572,7 +592,7 @@ export default function App() {
             e.preventDefault();
             setGlobalView('dashboard');
           }}
-          className="text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
+          className="text-base sm:text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
         >
           Strata Studio
         </a>
@@ -580,7 +600,7 @@ export default function App() {
         {/* Zone 2: 4 concise single-line navigation links */}
         <nav
           aria-label="Primary studio navigation"
-          className="flex items-center gap-6 text-sm font-medium text-slate-600 overflow-x-auto"
+          className="order-3 sm:order-2 w-full sm:w-auto flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-medium text-slate-600 overflow-x-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100"
         >
           <a
             href="#dashboard"
@@ -588,7 +608,7 @@ export default function App() {
               e.preventDefault();
               setGlobalView('dashboard');
             }}
-            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 pb-1 sm:pb-0 ${
               globalView === 'dashboard'
                 ? 'text-slate-900 underline underline-offset-8 decoration-2 decoration-blue-600'
                 : ''
@@ -602,7 +622,7 @@ export default function App() {
               e.preventDefault();
               setGlobalView('project');
             }}
-            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 pb-1 sm:pb-0 ${
               globalView === 'project'
                 ? 'text-slate-900 underline underline-offset-8 decoration-2 decoration-blue-600'
                 : ''
@@ -616,7 +636,7 @@ export default function App() {
               e.preventDefault();
               setGlobalView('brands');
             }}
-            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 pb-1 sm:pb-0 ${
               globalView === 'brands'
                 ? 'text-slate-900 underline underline-offset-8 decoration-2 decoration-blue-600'
                 : ''
@@ -630,7 +650,7 @@ export default function App() {
               e.preventDefault();
               setGlobalView('docs');
             }}
-            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 ${
+            className={`hover:text-slate-900 transition-colors whitespace-nowrap shrink-0 pb-1 sm:pb-0 ${
               globalView === 'docs'
                 ? 'text-slate-900 underline underline-offset-8 decoration-2 decoration-blue-600'
                 : ''
@@ -641,17 +661,18 @@ export default function App() {
         </nav>
 
         {/* Zone 3: Credits & Pay-As-You-Go + User Account + New Project */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="order-2 sm:order-3 flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <button
             type="button"
             onClick={() => setIsCreditsModalOpen(true)}
-            className="px-3 py-1.5 text-xs font-mono font-semibold text-slate-800 bg-slate-100 border border-slate-300 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap"
+            className="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-mono font-semibold text-slate-800 bg-slate-100 border border-slate-300 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap"
             title="View compute credit allowance and Pay-As-You-Go packs"
           >
-            ⚡ {(creditWallet?.balance ?? 500).toLocaleString()} Credits · Top Up
+            ⚡ {(creditWallet?.balance ?? 500).toLocaleString()}{' '}
+            <span className="hidden md:inline">Credits · Top Up</span>
           </button>
-          <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-            <span className="font-semibold text-slate-800 truncate max-w-[140px]">
+          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+            <span className="font-semibold text-slate-800 truncate max-w-[130px]">
               {studioUser.displayName}
             </span>
             <button
@@ -665,13 +686,42 @@ export default function App() {
           </div>
           <button
             type="button"
+            onClick={handleSignOutUser}
+            className="lg:hidden px-2 py-1.5 text-[11px] font-medium text-slate-500 hover:text-rose-600"
+            title="Sign Out"
+          >
+            Sign Out
+          </button>
+          <button
+            type="button"
             onClick={() => setIsNewProjectModalOpen(true)}
-            className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0"
           >
             New Project
           </button>
         </div>
       </header>
+
+      {/* Personalized Brand Profile Prompt Banner if no brand profile created yet */}
+      {!loading && brands.length === 0 && (
+        <div className="bg-blue-50 border-b border-blue-200 px-4 sm:px-6 py-2.5">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-blue-900">
+              <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="font-medium">
+                Personalize your studio: create your own Brand Profile so all generated written posts and short-form video clips match your exact brand voice.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBrandOnboardingDismissed(false)}
+              className="px-3 py-1 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 shrink-0"
+            >
+              Build Brand Profile
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Global Background Upload & Sync Banner (Persists While Exploring Any Tab/Section) */}
       {activeUploadEntries.length > 0 && (
@@ -1205,11 +1255,13 @@ export default function App() {
                       await refreshAll(data);
                     }}
                     onDeleteProject={async () => {
+                      const targetId = activeBundle.project.id;
                       const res = await fetch(
-                        `/api/projects/${activeBundle.project.id}`,
+                        `/api/projects/${encodeURIComponent(targetId)}?cancelActiveJobs=true`,
                         { method: 'DELETE' }
                       );
                       if (res.ok) {
+                        void deleteProjectFromFirestore(targetId);
                         const nextState = await fetchStudioState();
                         const nextProj = nextState.projects?.[0];
                         if (nextProj) {
@@ -1229,6 +1281,29 @@ export default function App() {
           </main>
         </div>
       )}
+
+      {/* First-Run Personalized Brand Profile Setup Modal */}
+      <FirstRunBrandOnboardingModal
+        isOpen={!loading && brands.length === 0 && !brandOnboardingDismissed}
+        initialBrandName={pendingBrandName}
+        onCreateBrand={async (payload) => {
+          await handleSaveBrand(payload, false);
+          setBrandOnboardingDismissed(true);
+        }}
+        onSkipWithQuickBrand={async () => {
+          await handleSaveBrand(
+            {
+              name: pendingBrandName || `${studioUser.displayName}'s Brand`,
+              industry: 'Digital Media & Technology',
+              companyDescription:
+                'Personalized content operations studio for written deliverables and short-form video clips.',
+              brandVoice: 'Clear, authoritative, and actionable',
+            },
+            false
+          );
+          setBrandOnboardingDismissed(true);
+        }}
+      />
 
       {/* New Project Modal */}
       <NewProjectModal
