@@ -1,0 +1,1117 @@
+# PROJECT: AI CONTENT REPURPOSING STUDIO
+
+## 1. YOUR ROLE
+
+Act as a senior full-stack engineer, AI systems architect, product designer, video automation engineer, and content strategist.
+
+Your task is to design, build, test, and document a production-oriented AI-powered content repurposing application.
+
+Do not merely create a landing page, a static dashboard, or a prototype that displays fabricated results.
+
+Build a functional application in which a user can import a long-form video, analyse its contents, generate platform-specific marketing assets, identify promising short-form video segments, render those segments, review the results, and export a complete content package.
+
+Prioritise correctness, reliability, modularity, usability, and minimal operating costs.
+
+Make sensible implementation decisions independently. Do not stop at planning or repeatedly ask for permission to implement ordinary features.
+
+If a third-party integration requires credentials that are unavailable, implement the integration interface, provide clear setup instructions, and build a functional alternative wherever possible.
+
+Never claim a feature works unless it has actually been implemented and tested.
+
+---
+
+## 2. PRODUCT VISION
+
+Build an AI-powered content production platform that transforms one long-form video into a complete, brand-aware content distribution package.
+
+Supported source material should include:
+
+- Podcasts.
+- Interviews.
+- Webinars.
+- Founder conversations.
+- Educational videos.
+- Product demonstrations.
+- Business presentations.
+- Recorded events.
+- Other long-form spoken content.
+
+The application should transform the source into a coordinated collection of:
+
+1. SEO-oriented blog articles.
+2. Email newsletters.
+3. LinkedIn posts.
+4. Short-form video clips.
+5. Video titles and opening hooks.
+6. Captions and subtitles.
+7. Content calendars.
+8. Source-linked quotations and insights.
+9. Suggested calls to action.
+10. A downloadable content delivery package.
+
+The core product principle is:
+
+ONE SOURCE → ONE CONTENT STRATEGY → MULTIPLE COORDINATED ASSETS.
+
+Every asset must originate from the actual source material and the client's brand profile.
+
+The system must not invent quotations, statistics, case studies, customer claims, or statements attributed to the speaker.
+
+---
+
+## 3. PRIMARY USER JOURNEY
+
+Implement the following end-to-end workflow.
+
+### Step 1: Create a project
+
+The user opens the dashboard and creates a new content project.
+
+Ask for:
+
+- Project name.
+- Client or brand.
+- Source title.
+- Source type.
+- Source language.
+- Target audience.
+- Primary marketing objective.
+- Desired platforms.
+- Desired number of deliverables.
+- Publishing period.
+
+Allow users to select an existing brand profile or create a new one.
+
+### Step 2: Import the source
+
+Support the following input methods:
+
+A. Upload a local video file.
+
+B. Upload an audio file.
+
+C. Upload an existing transcript, preferably with timestamps and speaker labels.
+
+D. Import a transcript from a supported source.
+
+E. Enter a public video URL when the source is accessible through an authorised integration.
+
+Do not assume every public URL can be downloaded.
+
+Respect source-platform restrictions, authentication requirements, copyright, and access permissions.
+
+Do not implement mechanisms intended to bypass access controls or download restrictions.
+
+If a URL cannot be processed, explain the limitation and offer an authorised upload or transcript-import alternative.
+
+Validate file type, file size, duration, and available storage before starting processing.
+
+### Step 3: Transcribe and normalise
+
+If the user supplies a transcript, parse and validate it.
+
+If transcription is required, use a configurable transcription provider.
+
+Normalise the transcript into a common internal structure.
+
+Each transcript segment should support:
+
+- Segment identifier.
+- Start timestamp.
+- End timestamp.
+- Spoken text.
+- Speaker identifier, when available.
+- Language.
+- Confidence information, when available.
+
+Preserve the relationship between transcript segments and the original media timeline.
+
+Never fabricate precise timestamps when they are unavailable.
+
+If only a plain transcript is available, clearly distinguish estimated timing from verified timing.
+
+Show transcription progress and meaningful error messages.
+
+Allow users to inspect the transcript before proceeding.
+
+### Step 4: Analyse the source
+
+Pass the transcript and relevant source metadata to the configured AI model.
+
+The AI must analyse the material before generating the final assets.
+
+Produce a structured Content Intelligence Report containing:
+
+- Executive summary.
+- Main thesis.
+- Important arguments.
+- Key themes.
+- Audience pain points.
+- Useful explanations.
+- Memorable moments.
+- Actionable recommendations.
+- Relevant examples.
+- Explicitly stated statistics.
+- Strong quotations.
+- Potential misconceptions.
+- Potentially misleading or unsupported claims.
+- Content opportunities.
+- Recommended distribution strategy.
+
+Where practical, associate every important insight with the source transcript segments that support it.
+
+Distinguish between:
+1. What the speaker explicitly said.
+2. A reasonable interpretation of the speaker's argument.
+3. An external fact that would require separate verification.
+
+Do not present an interpretation as a direct quotation.
+
+### Step 5: Develop the content strategy
+
+Before generating individual assets, create a shared content plan.
+
+Identify several distinct content angles.
+
+For each angle, specify:
+
+- Target audience.
+- Audience problem or interest.
+- Central message.
+- Supporting source material.
+- Intended platform.
+- Desired reader or viewer response.
+- Appropriate call to action.
+- Potential relationship to the client's products or services.
+
+Avoid repeating the same central argument across every deliverable.
+
+Allow the user to review and modify the strategy before generating the full content package.
+
+### Step 6: Generate the assets
+
+Generate the selected content types using the shared analysis, approved strategy, and saved brand profile.
+
+Each output must be independently editable.
+
+### Step 7: Identify video clips
+
+Identify potential short-form video moments using the source transcript.
+
+Rank them according to their potential usefulness and suitability.
+
+For each clip, generate a structured cut sheet.
+
+### Step 8: Render videos
+
+Use FFmpeg or an equivalent configurable video-processing engine to extract the approved segments.
+
+Generate captions, apply the selected layout, and render the video.
+
+Do not assume the AI has already produced a correct clip simply because it returned timestamps.
+
+### Step 9: Review and approve
+
+Display the complete set of assets in a review workspace.
+
+Allow the user to edit, regenerate, approve, reject, or export individual deliverables.
+
+### Step 10: Export
+
+Generate a structured downloadable package containing the approved assets.
+
+Include a manifest listing the files, their formats, their status, and their source project.
+
+---
+
+## 4. BRAND INTELLIGENCE SYSTEM
+
+Create a persistent brand profile system.
+
+A brand profile should contain:
+
+- Brand name.
+- Company description.
+- Industry.
+- Business model.
+- Products and services.
+- Target audiences.
+- Primary customer problems.
+- Brand positioning.
+- Unique differentiators.
+- Brand voice.
+- Writing style.
+- Preferred vocabulary.
+- Words and phrases to avoid.
+- Approved calls to action.
+- Website.
+- Relevant brand references.
+- Existing content examples.
+- Preferred platforms.
+- Visual identity.
+- Logo.
+- Brand colours.
+- Font preferences, where licensing permits.
+- Video layout preferences.
+- Subtitles and caption styling.
+- Legal disclaimers or claim restrictions.
+
+Allow users to create and manage multiple brand profiles.
+
+Store the brand profile separately from individual content projects.
+
+Before generation, inject the relevant brand information into the content generation process.
+
+Do not assume that every business has the same tone, audience, or marketing objectives.
+
+If important brand information is missing, use sensible defaults and clearly indicate which assumptions were made.
+
+---
+
+## 5. AI CONTENT GENERATION ENGINE
+
+Build a modular AI provider layer.
+
+The initial provider should support the Gemini API.
+
+Keep the provider implementation separate from the content generation logic so additional models can be integrated later.
+
+Requirements:
+
+- Server-side API calls.
+- Environment-based credentials.
+- Structured JSON outputs.
+- Input validation.
+- Output schema validation.
+- Retries for recoverable failures.
+- Rate-limit handling.
+- Request timeouts.
+- Token and usage tracking when available.
+- Configurable model selection.
+- Clear error reporting.
+- Protection against malformed AI responses.
+
+Use deterministic application logic for validation, calculations, timestamps, and file operations.
+
+Use AI for interpretation, writing, ranking, and creative recommendations.
+
+Do not use AI to perform calculations that ordinary code can reliably execute.
+
+Create separate generation modules for blogs, newsletters, LinkedIn posts, clip discovery, captions, and content calendars.
+
+Avoid a single enormous prompt that attempts to generate every asset in one response.
+
+Use the shared Content Intelligence Report as the common source of truth.
+
+### A. SEO BLOG GENERATOR
+
+Generate an editable blog article containing:
+
+- Suggested title.
+- Alternative headlines.
+- Search intent.
+- Primary keyword, when appropriate.
+- Relevant secondary keywords.
+- Meta title.
+- Meta description.
+- Suggested URL slug.
+- Introduction.
+- Logical headings.
+- Main article.
+- Conclusion.
+- Relevant internal-link suggestions.
+- Appropriate call to action.
+- Source references to the original transcript.
+
+Requirements:
+
+- Prioritise readability and usefulness.
+- Do not force keywords unnaturally.
+- Do not fabricate research or external citations.
+- Do not claim that search rankings are guaranteed.
+- Distinguish source-supported claims from additional research requirements.
+- Avoid repetitive AI-generated filler.
+- Support user-selected article length.
+
+### B. EMAIL NEWSLETTER GENERATOR
+
+Generate:
+
+- Subject line.
+- Alternative subject lines.
+- Preview text.
+- Opening.
+- Main message.
+- Key takeaways.
+- Optional source quotation.
+- Call to action.
+- Closing.
+
+The newsletter should read naturally as an email, not as a blog article copied into an email template.
+
+Allow the user to choose the objective, audience, length, and tone.
+
+### C. LINKEDIN CONTENT GENERATOR
+
+Generate individually useful posts based on different content angles.
+
+Support formats such as:
+
+- Strong opinion.
+- Educational breakdown.
+- Practical framework.
+- Founder lesson.
+- Storytelling.
+- Contrarian argument.
+- Mistake and lesson.
+- List-based post.
+- Short insight.
+- Discussion starter.
+
+For each post, include:
+
+- Post text.
+- Opening hook.
+- Core argument.
+- Supporting source material.
+- Optional call to action.
+- Suggested publication date.
+- Relevant source timestamps, where applicable.
+
+Each post must make sense independently.
+
+Do not produce ten superficial rewrites of the same idea.
+
+Avoid invented personal experiences or attributing opinions to a founder that they did not express.
+
+Provide editable content and configurable length.
+
+### D. ADDITIONAL CONTENT FORMATS
+
+Design the architecture so additional modules can be added later, including:
+
+- X posts.
+- Instagram captions.
+- YouTube descriptions.
+- Video titles.
+- Podcast show notes.
+- FAQ articles.
+- Sales enablement snippets.
+- Educational carousels.
+- Content briefs.
+
+Implement a small number of these after the core workflow is working.
+
+Do not sacrifice the reliability of the primary features to maximise the number of integrations.
+
+---
+
+## 6. INTELLIGENT VIDEO CLIP DISCOVERY
+
+This is one of the application's most important modules.
+
+The system must identify genuinely useful short-form segments rather than simply selecting random portions of a video.
+
+Evaluate candidate clips according to:
+
+- Strength of the opening.
+- Clarity of the central idea.
+- Relevance to the target audience.
+- Completeness of the argument.
+- Practical usefulness.
+- Storytelling quality.
+- Emotional resonance, when appropriate.
+- Potential for audience engagement.
+- Independence from surrounding context.
+- Suitability for the intended platform.
+
+These scores are editorial estimates, not predictions of guaranteed views or virality.
+
+### Clip requirements
+
+Allow configurable target durations, with sensible defaults between 30 and 60 seconds.
+
+A clip may be shorter or longer when the user explicitly allows it and the content justifies the choice.
+
+For each candidate, return structured data containing:
+
+- Clip ID.
+- Proposed title.
+- Hook.
+- Start timestamp.
+- End timestamp.
+- Duration.
+- Exact opening transcript text.
+- Exact closing transcript text.
+- Complete transcript for the selected interval.
+- Central idea.
+- Reason for selection.
+- Target audience.
+- Recommended platform.
+- Suggested caption.
+- Suggested on-screen title.
+- Call to action.
+- Editorial quality score.
+- Timing confidence.
+- Relevant source segment IDs.
+- Validation status.
+
+Use valid JSON that conforms to an application-defined schema.
+
+### Clip boundary validation
+
+The AI must select boundaries using the timestamped transcript.
+
+The application must then:
+
+1. Confirm that the start and end timestamps are valid.
+2. Confirm that the timestamps fall within the source media duration.
+3. Confirm that the end is later than the start.
+4. Calculate the duration programmatically.
+5. Check that the selected transcript segments correspond to the intended interval.
+6. Identify boundaries that cut through sentences.
+7. Flag clips that lack sufficient context.
+8. Allow the user to adjust both boundaries.
+9. Preview the selected interval before final rendering.
+
+Do not silently adjust a timestamp if doing so changes the meaning of the clip.
+
+When the available transcript does not support precise boundary validation, mark the clip as needing review.
+
+### Clip ranking
+
+Rank candidates using configurable editorial weights.
+
+Provide separate assessments for:
+
+- Opening strength.
+- Content clarity.
+- Completeness.
+- Audience relevance.
+- Standalone usefulness.
+- Production suitability.
+
+Explain the rationale behind the ranking.
+
+Do not claim that a high score guarantees viral performance.
+
+### Avoid repetitive clips
+
+Check for overlapping or substantially similar candidate segments.
+
+Flag candidates that repeat the same point.
+
+Offer a diverse final selection rather than eight clips with nearly identical messages.
+
+---
+
+## 7. AUTOMATED VIDEO PRODUCTION
+
+Implement a real video-processing pipeline.
+
+Use FFmpeg for media operations.
+
+Support portrait output at 1080 × 1920 when the source resolution and rendering environment permit.
+
+Allow configurable output dimensions and aspect ratios.
+
+### Required processing capabilities
+
+1. Extract the selected source interval.
+2. Preserve audio and synchronisation.
+3. Convert the video to the selected aspect ratio.
+4. Offer crop, fit, and blurred-background layout options.
+5. Generate or import subtitles.
+6. Apply a configurable caption style.
+7. Support a brand logo overlay.
+8. Support a short title or hook overlay.
+9. Render the final clip.
+10. Save a preview and final output.
+11. Report rendering errors clearly.
+
+Provide optional caption styling with:
+
+- Font.
+- Font size.
+- Text colour.
+- Background or outline.
+- Position.
+- Line length.
+- Maximum words per caption segment.
+- Highlighted keywords.
+- Safe margins.
+
+Ensure captions do not obscure important visual content.
+
+Use a reliable font available in the rendering environment, or allow the user to provide a licensed font.
+
+### Video rendering reliability
+
+Use an explicit rendering configuration.
+
+Validate input files before rendering.
+
+Handle missing codecs, invalid timestamps, insufficient disk space, and failed processes.
+
+Do not freeze the main interface during rendering.
+
+For a local prototype, use a background worker or job queue that fits the chosen runtime.
+
+Persist job status and error details.
+
+Allow failed jobs to be retried.
+
+Use unique output filenames and avoid accidentally overwriting existing files.
+
+The interface should distinguish between:
+
+- Waiting.
+- Processing.
+- Ready for review.
+- Approved.
+- Failed.
+
+Do not mark a job as complete until the output file exists and basic validation succeeds.
+
+### Transcript and caption synchronisation
+
+Use the source transcript's timestamps wherever possible.
+
+If timing is approximate, make that limitation visible.
+
+Do not generate word-level timing by simply dividing a sentence's duration evenly among its words and presenting it as verified synchronisation.
+
+---
+
+## 8. CONTENT REVIEW WORKSPACE
+
+Build a unified review interface.
+
+Display each deliverable as an individual editable asset.
+
+For written content, provide:
+
+- Editable text.
+- Copy button.
+- Regenerate button.
+- Revision instructions.
+- Save changes.
+- Approve.
+- Reject.
+- Source references.
+
+For videos, provide:
+
+- Video player.
+- Clip title.
+- Start and end times.
+- Editable boundary controls.
+- Transcript preview.
+- Caption preview.
+- Rendering status.
+- Regenerate or rerender action.
+- Approve.
+- Reject.
+
+When regenerating an asset, preserve the user's other approved assets.
+
+Allow the user to regenerate a single paragraph, post, headline, or clip recommendation without rerunning the entire project.
+
+Clearly distinguish AI-generated drafts from approved final deliverables.
+
+Store the latest approved version separately from the working version.
+
+---
+
+## 9. CONTENT CALENDAR
+
+Generate a proposed four-week content calendar from the selected assets.
+
+Allow the user to choose:
+
+- Campaign start date.
+- Publishing frequency.
+- Platforms.
+- Preferred publishing days.
+- Content categories.
+- Campaign objective.
+
+Assign assets to dates using simple deterministic scheduling rules.
+
+Avoid scheduling all assets on the same day.
+
+Balance educational, entertaining, opinion-led, and promotional content when the source supports those categories.
+
+Provide a calendar view and a list view.
+
+Allow users to change publication dates and reorder assets.
+
+The calendar must remain editable.
+
+Do not claim that posts have been published unless a genuine publishing integration exists and confirms the action.
+
+---
+
+## 10. PROJECT DASHBOARD
+
+Create a polished application dashboard.
+
+The interface should feel like a premium content production studio.
+
+Include:
+
+- Project overview.
+- Brand selector.
+- Recent projects.
+- New project button.
+- Source upload area.
+- Processing status.
+- Content generation progress.
+- Number of assets generated.
+- Number of assets approved.
+- Failed tasks requiring attention.
+- Recent exports.
+- Project search.
+
+Each project should have dedicated sections for:
+
+1. Overview.
+2. Source material.
+3. Transcript.
+4. Content intelligence.
+5. Written assets.
+6. Video clips.
+7. Content calendar.
+8. Exports.
+9. Project settings.
+
+Use a clear navigation hierarchy.
+
+Prioritise fast workflows and readable content over decorative complexity.
+
+Make the interface responsive for desktop and tablet use.
+
+Use accessible controls, keyboard navigation, clear labels, loading states, and meaningful empty states.
+
+Avoid excessive gradients, unnecessary animations, and generic AI-themed decorations.
+
+The finished product should look like a professional SaaS application, not a template populated with placeholder cards.
+
+---
+
+## 11. DATA MODEL AND ARCHITECTURE
+
+Create a modular application architecture.
+
+Separate:
+
+- User interface.
+- Project management.
+- Brand profiles.
+- Source ingestion.
+- Transcription.
+- Content analysis.
+- AI generation.
+- Clip discovery.
+- Video rendering.
+- Asset management.
+- Approval workflow.
+- Export management.
+
+Define typed models for the main entities.
+
+At minimum, support:
+
+### Brand
+- ID.
+- Name.
+- Description.
+- Voice guidelines.
+- Audience.
+- Products and services.
+- Visual settings.
+- Restrictions.
+- Creation and update timestamps.
+
+### Project
+- ID.
+- Name.
+- Brand ID.
+- Source metadata.
+- Project configuration.
+- Status.
+- Created and updated timestamps.
+
+### Source
+- ID.
+- Project ID.
+- File or authorised source reference.
+- Media duration.
+- Media metadata.
+- Transcript reference.
+- Processing status.
+
+### Transcript segment
+- ID.
+- Source ID.
+- Start.
+- End.
+- Text.
+- Speaker ID.
+- Confidence, if available.
+
+### Content analysis
+- ID.
+- Project ID.
+- Analysis version.
+- Key themes.
+- Audience insights.
+- Content angles.
+- Source references.
+
+### Asset
+- ID.
+- Project ID.
+- Asset type.
+- Platform.
+- Title.
+- Content.
+- Source references.
+- Status.
+- Version.
+- Creation timestamp.
+
+### Clip
+- ID.
+- Project ID.
+- Source ID.
+- Start.
+- End.
+- Duration.
+- Transcript.
+- Editorial scores.
+- Render status.
+- Output reference.
+
+### Render job
+- ID.
+- Project ID.
+- Clip ID.
+- Processing status.
+- Configuration.
+- Output path.
+- Error details.
+- Created and completed timestamps.
+
+### Export
+- ID.
+- Project ID.
+- Export manifest.
+- File reference.
+- Creation timestamp.
+
+Use a local database or lightweight persistence mechanism for the initial version.
+
+Create clear interfaces for replacing local persistence with a hosted database later.
+
+Avoid unnecessary infrastructure and paid services during the prototype phase.
+
+Do not store large video files directly in database records.
+
+---
+
+## 12. EXPORT SYSTEM
+
+Create a downloadable project package.
+
+Support a ZIP archive containing:
+
+/project-name/
+    /documents/
+        blog.md
+        newsletter.md
+        linkedin-posts.md
+    /videos/
+        clip-01.mp4
+        clip-02.mp4
+    /captions/
+        clip-01.srt
+        clip-02.srt
+    /metadata/
+        content-calendar.json
+        cut-sheet.json
+        asset-manifest.json
+
+Include only files that were actually generated.
+
+The ZIP structure may be extended based on the selected deliverables.
+
+The asset manifest should include:
+
+- Filename.
+- Asset type.
+- Platform.
+- Status.
+- Relevant source timestamps.
+- Export timestamp.
+
+Where relevant, also include plain-text and CSV versions of the content calendar and cut sheet.
+
+Provide an option to export individual assets without downloading the entire project.
+
+---
+
+## 13. SECURITY AND PRIVACY
+
+Implement the following safeguards:
+
+- Keep API keys on the server.
+- Validate uploaded files.
+- Restrict file operations to approved project directories.
+- Avoid shell command injection when invoking FFmpeg.
+- Escape and validate user-provided filenames.
+- Limit processing concurrency.
+- Apply sensible file-size and duration limits.
+- Avoid exposing private filesystem paths.
+- Do not expose credentials in logs or error messages.
+- Clean up temporary files when appropriate.
+- Provide a way to delete project data.
+- Document where source files and generated assets are stored.
+- Do not send source material to third-party services without making the processing behaviour clear.
+- Do not use client content to train a model unless the user has explicitly authorised that behaviour.
+
+If multi-user authentication is introduced, implement proper project-level access controls.
+
+Do not represent local-only prototype storage as secure multi-tenant cloud storage.
+
+---
+
+## 14. COST CONTROL
+
+Minimise operating costs without sacrificing essential reliability.
+
+Use the following principles:
+
+1. Prefer local video processing when feasible.
+2. Reuse existing transcripts rather than transcribing the same source repeatedly.
+3. Cache validated analysis results.
+4. Generate only the assets requested by the user.
+5. Allow selective regeneration.
+6. Track estimated AI usage when provider data is available.
+7. Avoid duplicate processing jobs.
+8. Reuse generated caption files when their timing remains valid.
+9. Keep model selection configurable.
+10. Allow users to choose lower-cost processing options where appropriate.
+
+Clearly distinguish between estimated costs and verified provider usage.
+
+Do not hard-code claims that a model, API, or hosting service will remain free.
+
+Do not silently fall back to an alternative paid service.
+
+If a quota is exhausted, show the user what happened and offer a reasonable next step.
+
+---
+
+## 15. FAILURE HANDLING
+
+Every processing stage must have explicit success and failure states.
+
+Examples include:
+
+- Unsupported source URL.
+- Invalid upload.
+- Failed transcription.
+- Malformed AI output.
+- API rate limit.
+- Network failure.
+- Invalid timestamp.
+- Missing media file.
+- FFmpeg error.
+- Insufficient disk space.
+- Export failure.
+
+Where safe, retry transient failures with bounded exponential backoff.
+
+Do not retry permanent validation errors indefinitely.
+
+Preserve completed work when a later stage fails.
+
+For example, if video rendering fails, the user should still be able to access the transcript, analysis, blog, newsletter, and LinkedIn posts that were successfully generated.
+
+Provide actionable error messages and a retry button.
+
+---
+
+## 16. TESTING REQUIREMENTS
+
+Write tests for the critical application logic.
+
+At minimum, test:
+
+- Timestamp parsing.
+- Transcript validation.
+- Clip duration calculation.
+- Clip boundary validation.
+- Source-duration constraints.
+- Structured AI response validation.
+- Brand profile selection.
+- Asset persistence.
+- Rendering job state transitions.
+- Export manifest generation.
+- ZIP export creation.
+- Failure handling.
+- File path validation.
+
+Create a small test fixture containing a transcript with known timestamps and a short sample media file where practical.
+
+Test that the application can extract a clip using known start and end times.
+
+Verify that the rendered clip exists, has a valid duration, and contains the expected audio and video streams.
+
+Mock external AI services in automated tests.
+
+Do not require paid API access for basic application tests.
+
+Clearly document which tests require external credentials or actual media processing.
+
+---
+
+## 17. IMPLEMENTATION PLAN
+
+Build the application in the following phases.
+
+### Phase 1: Working foundation
+
+Implement:
+
+- Application shell.
+- Dashboard.
+- Brand profiles.
+- Project creation.
+- Video and transcript import.
+- Local persistence.
+- Basic project navigation.
+
+At the end of this phase, users must be able to create projects and manage source material.
+
+### Phase 2: Content intelligence
+
+Implement:
+
+- AI provider integration.
+- Transcript normalisation.
+- Source analysis.
+- Content strategy.
+- Structured asset generation.
+- Editable blogs, newsletters, and LinkedIn posts.
+
+Use genuine AI responses when credentials are configured.
+
+### Phase 3: Clip discovery
+
+Implement:
+
+- Candidate segment generation.
+- Structured cut sheets.
+- Clip scoring.
+- Timestamp validation.
+- Transcript alignment.
+- Clip preview.
+- Editable boundaries.
+
+### Phase 4: Video rendering
+
+Implement:
+
+- FFmpeg integration.
+- Clip extraction.
+- Vertical formatting.
+- Subtitle generation and rendering.
+- Branding overlays.
+- Render job tracking.
+- Error handling.
+
+### Phase 5: Review and export
+
+Implement:
+
+- Approval workflows.
+- Content calendar.
+- Asset versioning.
+- ZIP export.
+- Manifest generation.
+- Individual asset downloads.
+
+### Phase 6: Hardening
+
+Implement:
+
+- Automated tests.
+- Performance improvements.
+- Security checks.
+- Better failure recovery.
+- Setup documentation.
+- Production deployment guidance.
+
+Do not attempt to build every advanced feature before the core workflow works.
+
+Prioritise a reliable end-to-end path from source import to downloadable assets.
+
+---
+
+## 18. DEFINITION OF DONE
+
+The application is not complete merely because the dashboard looks polished.
+
+A successful implementation must demonstrate the following workflow:
+
+1. The user creates a brand profile.
+2. The user creates a project.
+3. The user uploads a supported video or timestamped transcript.
+4. The application processes the source or explains why processing cannot continue.
+5. The AI produces a structured analysis.
+6. The application generates a blog, newsletter, and multiple distinct LinkedIn posts.
+7. The application identifies short-form video candidates.
+8. The user reviews and edits the proposed timestamps.
+9. The video engine renders at least one actual clip from the original media.
+10. The application produces synchronised captions using available timing information.
+11. The user approves the assets.
+12. The user downloads a ZIP containing the generated deliverables.
+13. The application preserves completed work if an individual stage fails.
+
+All essential functionality must use real application logic.
+
+Do not use hard-coded sample results to simulate completed processing.
+
+If an external integration is unavailable, clearly identify it as unconfigured rather than presenting a mock result as genuine output.
+
+---
+
+## 19. FINAL INSTRUCTIONS
+
+Begin by inspecting the existing project, if one exists.
+
+Identify the current framework, dependencies, and available infrastructure.
+
+If there is no existing application, initialise a clean project using Next.js, TypeScript, React, and Tailwind CSS.
+
+Before implementation, create a concise technical plan and define the core data structures.
+
+Then proceed directly to building the application.
+
+Keep the code modular, typed, maintainable, and easy to extend.
+
+Use environment variables for configuration.
+
+Provide an example environment file without real credentials.
+
+Create clear setup instructions covering dependencies, FFmpeg installation, API configuration, local execution, testing, and troubleshooting.
+
+Run the available checks and tests as you build.
+
+Resolve implementation errors instead of merely listing them.
+
+At every phase, prioritise working functionality over decorative placeholders.
+
+The final objective is a usable AI content production studio that can transform long-form source material into a coordinated, editable, brand-aware, and downloadable package of marketing assets at the lowest practical cost.

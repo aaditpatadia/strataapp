@@ -1,0 +1,210 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Authenticated Strata Studio user profile and usage credit wallet summary.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the studio operator.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified email address of the user.",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Profile avatar URL.",
+          "minLength": 0,
+          "maxLength": 1024
+        },
+        "creditBalance": {
+          "type": "number",
+          "description": "Current available usage-based compute credits."
+        },
+        "lifetimeCreditsAdded": {
+          "type": "number",
+          "description": "Total credits provisioned or topped up."
+        },
+        "lifetimeCreditsUsed": {
+          "type": "number",
+          "description": "Total credits consumed across transcription, AI generation, and FFmpeg rendering."
+        },
+        "autoRechargeEnabled": {
+          "type": "boolean",
+          "description": "Whether pay-as-you-go auto-recharge is enabled when balance drops below threshold."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last wallet or profile sync.",
+          "minLength": 10,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email",
+        "creditBalance",
+        "lifetimeCreditsAdded",
+        "lifetimeCreditsUsed",
+        "autoRechargeEnabled",
+        "updatedAt"
+      ]
+    },
+    "ProjectSummary": {
+      "title": "ProjectSummary",
+      "description": "Cloud-synced project metadata and production status for a Strata Studio project.",
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "description": "Unique project identifier.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the user who owns this project.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Project title.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "brandProfileId": {
+          "type": "string",
+          "description": "Associated brand profile ID.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "primaryObjective": {
+          "type": "string",
+          "description": "Primary content repurposing objective.",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "transcriptCount": {
+          "type": "number",
+          "description": "Number of indexed transcript segments."
+        },
+        "clipCount": {
+          "type": "number",
+          "description": "Number of short-form video clips."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update.",
+          "minLength": 10,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "projectId",
+        "ownerId",
+        "name",
+        "brandProfileId",
+        "primaryObjective",
+        "transcriptCount",
+        "clipCount",
+        "updatedAt"
+      ]
+    },
+    "CreditTransactionDoc": {
+      "title": "CreditTransactionDoc",
+      "description": "Immutable ledger entry for usage-based credit consumption or pay-as-you-go top-up.",
+      "type": "object",
+      "properties": {
+        "txId": {
+          "type": "string",
+          "description": "Unique transaction ID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the user whose wallet was affected.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "type": {
+          "type": "string",
+          "description": "Transaction direction: credit_topup, usage_deduction, or starter_grant.",
+          "enum": ["credit_topup", "usage_deduction", "starter_grant"],
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "operation": {
+          "type": "string",
+          "description": "Operation code (e.g. audio_transcription, smart_clip_render, content_intelligence, payg_pack).",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the credit event.",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "amount": {
+          "type": "number",
+          "description": "Signed credit delta (+ for additions, - for consumption)."
+        },
+        "balanceAfter": {
+          "type": "number",
+          "description": "Wallet balance immediately following the transaction."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when transaction occurred.",
+          "minLength": 10,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "txId",
+        "ownerId",
+        "type",
+        "operation",
+        "description",
+        "amount",
+        "balanceAfter",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Private user account and credit wallet summary keyed by Firebase Auth UID."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/ProjectSummary" },
+      "description": "Cloud-synced project metadata owned by a specific user."
+    },
+    "/creditTransactions/{txId}": {
+      "schema": { "$ref": "#/entities/CreditTransactionDoc" },
+      "description": "Audit ledger of usage-based credit top-ups and consumption per user."
+    }
+  }
+}

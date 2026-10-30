@@ -1,0 +1,6 @@
+{
+  "name": "Strata Studio — AI Content Repurposing Platform",
+  "description": "Production-grade AI content repurposing studio transforming long-form video and transcripts into brand-aligned blogs, newsletters, LinkedIn campaigns, validated short-form video clips rendered via FFmpeg, and structured export packages.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

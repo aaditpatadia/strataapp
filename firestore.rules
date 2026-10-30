@@ -1,0 +1,178 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserAccount(data) {
+      return data.keys().hasAll([
+          'uid',
+          'displayName',
+          'email',
+          'creditBalance',
+          'lifetimeCreditsAdded',
+          'lifetimeCreditsUsed',
+          'autoRechargeEnabled',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid',
+          'displayName',
+          'email',
+          'photoURL',
+          'creditBalance',
+          'lifetimeCreditsAdded',
+          'lifetimeCreditsUsed',
+          'autoRechargeEnabled',
+          'updatedAt'
+        ]) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 254 &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
+        data.creditBalance is number && data.creditBalance >= 0 && data.creditBalance <= 10000000 &&
+        data.lifetimeCreditsAdded is number && data.lifetimeCreditsAdded >= 0 && data.lifetimeCreditsAdded <= 10000000 &&
+        data.lifetimeCreditsUsed is number && data.lifetimeCreditsUsed >= 0 && data.lifetimeCreditsUsed <= 10000000 &&
+        data.autoRechargeEnabled is bool &&
+        data.updatedAt is string && data.updatedAt.size() >= 10 && data.updatedAt.size() <= 64;
+    }
+
+    function isValidProjectSummary(data) {
+      return data.keys().hasAll([
+          'projectId',
+          'ownerId',
+          'name',
+          'brandProfileId',
+          'primaryObjective',
+          'transcriptCount',
+          'clipCount',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'projectId',
+          'ownerId',
+          'name',
+          'brandProfileId',
+          'primaryObjective',
+          'transcriptCount',
+          'clipCount',
+          'updatedAt'
+        ]) &&
+        data.projectId is string && data.projectId.size() >= 1 && data.projectId.size() <= 128 &&
+        data.projectId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+        data.brandProfileId is string && data.brandProfileId.size() >= 1 && data.brandProfileId.size() <= 128 &&
+        data.primaryObjective is string && data.primaryObjective.size() <= 1000 &&
+        data.transcriptCount is number && data.transcriptCount >= 0 && data.transcriptCount <= 100000 &&
+        data.clipCount is number && data.clipCount >= 0 && data.clipCount <= 10000 &&
+        data.updatedAt is string && data.updatedAt.size() >= 10 && data.updatedAt.size() <= 64;
+    }
+
+    function isValidCreditTransaction(data) {
+      return data.keys().hasAll([
+          'txId',
+          'ownerId',
+          'type',
+          'operation',
+          'description',
+          'amount',
+          'balanceAfter',
+          'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'txId',
+          'ownerId',
+          'type',
+          'operation',
+          'description',
+          'amount',
+          'balanceAfter',
+          'createdAt'
+        ]) &&
+        data.txId is string && data.txId.size() >= 1 && data.txId.size() <= 128 &&
+        data.txId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+        data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId == request.auth.uid &&
+        data.type is string && data.type.size() >= 5 && data.type.size() <= 32 &&
+        (data.type == 'credit_topup' || data.type == 'usage_deduction' || data.type == 'starter_grant') &&
+        data.operation is string && data.operation.size() >= 1 && data.operation.size() <= 64 &&
+        data.description is string && data.description.size() >= 1 && data.description.size() <= 300 &&
+        data.amount is number && data.amount >= -100000 && data.amount <= 1000000 &&
+        data.balanceAfter is number && data.balanceAfter >= 0 && data.balanceAfter <= 10000000 &&
+        data.createdAt is string && data.createdAt.size() >= 10 && data.createdAt.size() <= 64;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && userId == request.auth.uid;
+      allow list: if false;
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUserAccount(incoming());
+      allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+        isValidUserAccount(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName',
+          'email',
+          'photoURL',
+          'creditBalance',
+          'lifetimeCreditsAdded',
+          'lifetimeCreditsUsed',
+          'autoRechargeEnabled',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && isValidId(projectId) && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(projectId) && isValidProjectSummary(incoming()) && incoming().projectId == projectId;
+      allow update: if isSignedIn() && isValidId(projectId) &&
+        isValidProjectSummary(incoming()) &&
+        existing().ownerId == request.auth.uid &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().projectId == existing().projectId &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'brandProfileId',
+          'primaryObjective',
+          'transcriptCount',
+          'clipCount',
+          'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && isValidId(projectId) && existing().ownerId == request.auth.uid;
+    }
+
+    match /creditTransactions/{txId} {
+      allow get: if isSignedIn() && isValidId(txId) && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(txId) && isValidCreditTransaction(incoming()) && incoming().txId == txId;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
